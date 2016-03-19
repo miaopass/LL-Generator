@@ -14,18 +14,18 @@ enum SymType
 class GrammarSym
 {
 public:
-    GrammarSym(char n) : nullable(false),name(n) { }
+    GrammarSym(std::string n) : nullable(false),name(n) { }
     virtual ~GrammarSym() = default;
     virtual SymType getType() = 0;
     bool nullable;
     std::set<std::shared_ptr<GrammarSym>> First,Follow;
-    char name;
+    std::string name;
 };
 
 class TerminalStruct:public GrammarSym
 {
 public:
-    TerminalStruct(char n) : GrammarSym(n) { }
+    TerminalStruct(std::string n) : GrammarSym(n) { }
     virtual ~TerminalStruct() = default;
     virtual SymType getType() { return TERMINAL;}
 };
@@ -33,7 +33,7 @@ public:
 class NonTerminalStruct:public GrammarSym
 {
 public:
-    NonTerminalStruct(char n) : GrammarSym(n) { }
+    NonTerminalStruct(std::string n) : GrammarSym(n) { }
     virtual ~NonTerminalStruct() = default;
     virtual SymType getType() { return NONTERMINAL;}
 };

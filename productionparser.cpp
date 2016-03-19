@@ -9,9 +9,36 @@ ProductionParser::ProductionParser(std::string path):pro_num(0),count_nontermina
      if(file)
      {
          std::string line;
+         while(std::getline(file,line) && line != "---")
+         {
+             if(line.empty())
+                 continue;
+             std::string type;
+             std::string::iterator it;
+             for(it = line.begin();it != line.end() && *it != ':';it++)
+             {
+                 if(*it != ' ')
+                    type.push_back(*it);
+             }
+             while(it != line.end() && (*it == ':' || *it == ' '))it++;
+             while(it != line.end())
+             {
+                 std::string sym;
+                 while(it != line.end() && *it != ' ')
+                 {
+                     sym.push_back(*it++);
+                 }
+                 if(type == "terminal")
+                     terminal_set.insert({sym});
+                else if(type == "nonterminal")
+                     nonterminal_set.insert({sym});
+                 while(it != line.end() && *it == ' ')
+                     it++;
+             }
+         }
          while(std::getline(file,line))
          {
-             if(!line.empty())
+             if(!line.empty() && line != "---")
                 parse(line);
          }
      }
@@ -20,22 +47,33 @@ ProductionParser::ProductionParser(std::string path):pro_num(0),count_nontermina
 void ProductionParser::parse(std::string line)
 {
     Production prod(pro_num++);
-    char start = line[0];
-    sym_map.insert({start,std::shared_ptr<GrammarSym>(new NonTerminalStruct(start))});
-    prod.start_symbol = sym_map[start];
-    for(auto it = line.begin()+2;it != line.end();it++)
+    std::string start_sym;
+    auto it = line.begin();
+    while(it != line.end() && *it != ':')
     {
-        if(isNonTerminal(*it))
-        {
-            sym_map.insert({*it,std::shared_ptr<GrammarSym>(new NonTerminalStruct(*it))});
-            count_nonterminal++;
-        }
-        else
-        {
-            sym_map.insert({*it,std::shared_ptr<GrammarSym>(new TerminalStruct(*it))});
-            count_terminal++;
-        }
-        prod.body_symbol.push_back(sym_map[*it]);
+        if(*it != ' ')
+            start_sym.push_back(*it);
+        it++;
+    }
+    if(!isNonTerminal(start_sym))
+    {
+        //error:
+        exit(0);
+    }
+    sym_map.insert({start_sym,std::shared_ptr<GrammarSym>(new NonTerminalStruct(start_sym))});
+    prod.start_symbol = sym_map[start_sym];
+    while(it != line.end() && (*it == ':' || *it == ' '))it++;
+    while(it != line.end())
+    {
+        std::string sym;
+        while(it != line.end() && *it != ' ')
+            sym.push_back(*it++);
+        while(it != line.end() && *it == ' ')it++;
+        if(isNonTerminal(sym))
+            sym_map.insert({sym,std::shared_ptr<GrammarSym>(new NonTerminalStruct(sym))});
+        else sym_map.insert({sym,std::shared_ptr<GrammarSym>(new TerminalStruct(sym))});
+        prod.body_symbol.push_back(sym_map[sym]);
+
     }
     productions.push_back(std::move(prod));
 }
@@ -188,7 +226,7 @@ void ProductionParser::test()
         {
             std::cout<<sym->name<<" ";
         }
-        std::cout<<"  ";
+        std::cout<<"FIRST: ";
         for(auto sym : pro.First)
             std::cout<<sym->name<<" ";
         std::cout<<std::endl;
@@ -196,10 +234,10 @@ void ProductionParser::test()
     std::cout<<std::endl;
     for(auto sym : sym_map)
     {
-        std::cout<<sym.second->name<<" "<<sym.second->nullable<<" ";
+        std::cout<<sym.second->name<<"  nullable:"<<sym.second->nullable<<"  FIRST: ";
         for(auto s : sym.second->First)
             std::cout<<s->name<<" ";
-        std::cout<<"     ";
+        std::cout<<"  FOLLOW:";
         for(auto s : sym.second->Follow)
             std::cout<<s->name<<" ";
         std::cout<<std::endl;
